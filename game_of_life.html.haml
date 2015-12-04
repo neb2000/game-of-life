@@ -1,7 +1,7 @@
 !!! 5
 %html
   %head
-    %title Canvas Example
+    %title Conway's Game of Life
     %meta{ content: 'text/html;charset=utf-8', 'http-equiv' => 'Content-Type' }
     %link{ rel: 'stylesheet', type: 'text/css', href: 'https://cdnjs.cloudflare.com/ajax/libs/normalize/3.0.3/normalize.css' }
     %script{ type: 'text/javascript', src: 'https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js' }
@@ -23,8 +23,6 @@
         
         #board
           float: left
-          width: 500px
-          height: 500px
           position: relative
           margin-right: 10px
           #grid
@@ -42,26 +40,26 @@
           
     :coffee
       class Grid
-        constructor: (@context) ->
+        constructor: (@width, @height, @cellSize, @context) ->
         
         initGrid: ->
-          for x in [0..50]
-            @context.moveTo(x * 10 + 0.5, 0)
-            @context.lineTo(x * 10 + 0.5, 500)
+          for x in [0..@width]
+            @context.moveTo(x * @cellSize + 0.5, 0)
+            @context.lineTo(x * @cellSize + 0.5, @height * @cellSize)
             
-          for y in [0..50]
-            @context.moveTo(0, y * 10 + 0.5)
-            @context.lineTo(500, y * 10 + 0.5)
+          for y in [0..@height]
+            @context.moveTo(0, y * @cellSize + 0.5)
+            @context.lineTo(@width * @cellSize, y * @cellSize + 0.5)
             
           @context.strokeStyle = '#ddd'
           @context.stroke()
     
       class Board
-        constructor: (@context) ->
+        constructor: (@width, @height, @cellSize, @context) ->
           @cells = @initBoard()
         
         initBoard: ->
-          ((false for y in [0..49]) for x in [0..49])
+          ((false for y in [0..@height - 1]) for x in [0..@width - 1])
                             
         start: ->
           @interval = setInterval @tick, 100
@@ -79,9 +77,9 @@
           
           cells = []
           
-          for x in [0..49]
+          for x in [0..@width - 1]
             row = []
-            for y in [0..49]
+            for y in [0..@height - 1]
               aliveNeighbours = 0
               for neighbour in @neighbourCoordFor(x, y)
                 aliveNeighbours += 1 if @cells[neighbour.x][neighbour.y]
@@ -101,10 +99,10 @@
           @clear(x, y)
              
         neighbourCoordFor: (x, y) ->
-          leftX  = if x is 0 then 49 else x - 1
-          rightX = if x is 49 then 0 else x + 1
-          upY    = if y is 0 then 49 else y - 1
-          downY  = if y is 49 then 0 else y + 1
+          leftX  = if x is 0 then @width - 1 else x - 1
+          rightX = if x is @width - 1 then 0 else x + 1
+          upY    = if y is 0 then @height - 1 else y - 1
+          downY  = if y is @height - 1 then 0 else y + 1
           
           [
             { x: leftX,  y: upY }
@@ -120,19 +118,36 @@
           ]
         
         clearAll: ->
-          @context.clearRect(0, 0, 500, 500)
+          @context.clearRect(0, 0, @width * @cellSize, @height * @cellSize)
         
         draw: (x, y) ->
-          @context.fillRect(x * 10, y * 10, 10, 10)
+          @context.fillRect(x * @cellSize, y * @cellSize, @cellSize, @cellSize)
         
         clear: (x, y) ->
-          @context.clearRect(x * 10, y * 10, 10, 10)
+          @context.clearRect(x * @cellSize, y * @cellSize, @cellSize, @cellSize)
         
       $ ->
-        new Grid($('#grid')[0].getContext('2d')).initGrid()
+        $board = $('#board')
+        
+        cellSize = parseInt($board.data('cell-size'))
+        width = parseInt($board.data('width'))
+        height = parseInt($board.data('height'))
+        $board.css('width',  width * cellSize)
+        $board.css('height', height * cellSize)
+        
+        $grid = $('#grid')
+        $grid[0].width = width * cellSize + 1
+        $grid[0].height = height * cellSize + 1
+        
+        gridContext = $grid[0].getContext('2d')
+        new Grid(width, height, cellSize, gridContext).initGrid()
         
         $mainCanvas = $('#main-canvas')
-        $mainCanvas.data('board', new Board($mainCanvas[0].getContext('2d')))
+        $mainCanvas[0].width = width * cellSize
+        $mainCanvas[0].height = height * cellSize
+        
+        canvasContext = $mainCanvas[0].getContext('2d')
+        $mainCanvas.data('board', new Board(width, height, cellSize, canvasContext))
         
         $('[data-game-action]').on 'click', ->
           action = $(this).data('game-action')
@@ -141,8 +156,8 @@
         $mainCanvas.on('contextmenu', (e) ->
           return false
         ).on 'mousedown', (e) ->
-          x = Math.floor(e.offsetX / 10.0)
-          y = Math.floor(e.offsetY / 10.0)
+          x = Math.floor(e.offsetX / cellSize)
+          y = Math.floor(e.offsetY / cellSize)
           board = $(this).data('board')
           if e.which is 1
             board.addCell(x, y)
@@ -152,9 +167,9 @@
         
         
   %body
-    #board
-      %canvas#main-canvas{ width: 500, height: 500 }
-      %canvas#grid{ width: 501, height: 501 }
+    #board{ data: { width: 50, height: 50, cell_size: 10 } }
+      %canvas#main-canvas
+      %canvas#grid
       
     
     %button{ type: 'button', data: { game_action: :start } }
