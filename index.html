@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Canvas Example</title>
+    <title>Conway's Game of Life</title>
     <meta content='text/html;charset=utf-8' http-equiv='Content-Type'>
     <link href='https://cdnjs.cloudflare.com/ajax/libs/normalize/3.0.3/normalize.css' rel='stylesheet' type='text/css'>
     <script src='https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js' type='text/javascript'></script>
@@ -20,8 +20,6 @@
             margin-top: 5px; }
         body #board {
           float: left;
-          width: 500px;
-          height: 500px;
           position: relative;
           margin-right: 10px; }
           body #board #grid {
@@ -42,19 +40,22 @@
           bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
       
         Grid = (function() {
-          function Grid(context) {
+          function Grid(width1, height1, cellSize1, context) {
+            this.width = width1;
+            this.height = height1;
+            this.cellSize = cellSize1;
             this.context = context;
           }
       
           Grid.prototype.initGrid = function() {
-            var i, j, x, y;
-            for (x = i = 0; i <= 50; x = ++i) {
-              this.context.moveTo(x * 10 + 0.5, 0);
-              this.context.lineTo(x * 10 + 0.5, 500);
+            var i, j, ref, ref1, x, y;
+            for (x = i = 0, ref = this.width; 0 <= ref ? i <= ref : i >= ref; x = 0 <= ref ? ++i : --i) {
+              this.context.moveTo(x * this.cellSize + 0.5, 0);
+              this.context.lineTo(x * this.cellSize + 0.5, this.height * this.cellSize);
             }
-            for (y = j = 0; j <= 50; y = ++j) {
-              this.context.moveTo(0, y * 10 + 0.5);
-              this.context.lineTo(500, y * 10 + 0.5);
+            for (y = j = 0, ref1 = this.height; 0 <= ref1 ? j <= ref1 : j >= ref1; y = 0 <= ref1 ? ++j : --j) {
+              this.context.moveTo(0, y * this.cellSize + 0.5);
+              this.context.lineTo(this.width * this.cellSize, y * this.cellSize + 0.5);
             }
             this.context.strokeStyle = '#ddd';
             return this.context.stroke();
@@ -65,24 +66,27 @@
         })();
       
         Board = (function() {
-          function Board(context) {
+          function Board(width1, height1, cellSize1, context) {
+            this.width = width1;
+            this.height = height1;
+            this.cellSize = cellSize1;
             this.context = context;
             this.tick = bind(this.tick, this);
             this.cells = this.initBoard();
           }
       
           Board.prototype.initBoard = function() {
-            var i, results, x, y;
+            var i, ref, results, x, y;
             results = [];
-            for (x = i = 0; i <= 49; x = ++i) {
+            for (x = i = 0, ref = this.width - 1; 0 <= ref ? i <= ref : i >= ref; x = 0 <= ref ? ++i : --i) {
               results.push((function() {
-                var j, results1;
+                var j, ref1, results1;
                 results1 = [];
-                for (y = j = 0; j <= 49; y = ++j) {
+                for (y = j = 0, ref1 = this.height - 1; 0 <= ref1 ? j <= ref1 : j >= ref1; y = 0 <= ref1 ? ++j : --j) {
                   results1.push(false);
                 }
                 return results1;
-              })());
+              }).call(this));
             }
             return results;
           };
@@ -104,16 +108,16 @@
           };
       
           Board.prototype.tick = function() {
-            var alive, aliveNeighbours, cells, i, j, k, len, neighbour, ref, row, x, y;
+            var alive, aliveNeighbours, cells, i, j, k, len, neighbour, ref, ref1, ref2, row, x, y;
             this.clearAll();
             cells = [];
-            for (x = i = 0; i <= 49; x = ++i) {
+            for (x = i = 0, ref = this.width - 1; 0 <= ref ? i <= ref : i >= ref; x = 0 <= ref ? ++i : --i) {
               row = [];
-              for (y = j = 0; j <= 49; y = ++j) {
+              for (y = j = 0, ref1 = this.height - 1; 0 <= ref1 ? j <= ref1 : j >= ref1; y = 0 <= ref1 ? ++j : --j) {
                 aliveNeighbours = 0;
-                ref = this.neighbourCoordFor(x, y);
-                for (k = 0, len = ref.length; k < len; k++) {
-                  neighbour = ref[k];
+                ref2 = this.neighbourCoordFor(x, y);
+                for (k = 0, len = ref2.length; k < len; k++) {
+                  neighbour = ref2[k];
                   if (this.cells[neighbour.x][neighbour.y]) {
                     aliveNeighbours += 1;
                   }
@@ -141,10 +145,10 @@
       
           Board.prototype.neighbourCoordFor = function(x, y) {
             var downY, leftX, rightX, upY;
-            leftX = x === 0 ? 49 : x - 1;
-            rightX = x === 49 ? 0 : x + 1;
-            upY = y === 0 ? 49 : y - 1;
-            downY = y === 49 ? 0 : y + 1;
+            leftX = x === 0 ? this.width - 1 : x - 1;
+            rightX = x === this.width - 1 ? 0 : x + 1;
+            upY = y === 0 ? this.height - 1 : y - 1;
+            downY = y === this.height - 1 ? 0 : y + 1;
             return [
               {
                 x: leftX,
@@ -175,15 +179,15 @@
           };
       
           Board.prototype.clearAll = function() {
-            return this.context.clearRect(0, 0, 500, 500);
+            return this.context.clearRect(0, 0, this.width * this.cellSize, this.height * this.cellSize);
           };
       
           Board.prototype.draw = function(x, y) {
-            return this.context.fillRect(x * 10, y * 10, 10, 10);
+            return this.context.fillRect(x * this.cellSize, y * this.cellSize, this.cellSize, this.cellSize);
           };
       
           Board.prototype.clear = function(x, y) {
-            return this.context.clearRect(x * 10, y * 10, 10, 10);
+            return this.context.clearRect(x * this.cellSize, y * this.cellSize, this.cellSize, this.cellSize);
           };
       
           return Board;
@@ -191,10 +195,23 @@
         })();
       
         $(function() {
-          var $mainCanvas;
-          new Grid($('#grid')[0].getContext('2d')).initGrid();
+          var $board, $grid, $mainCanvas, canvasContext, cellSize, gridContext, height, width;
+          $board = $('#board');
+          cellSize = parseInt($board.data('cell-size'));
+          width = parseInt($board.data('width'));
+          height = parseInt($board.data('height'));
+          $board.css('width', width * cellSize);
+          $board.css('height', height * cellSize);
+          $grid = $('#grid');
+          $grid[0].width = width * cellSize + 1;
+          $grid[0].height = height * cellSize + 1;
+          gridContext = $grid[0].getContext('2d');
+          new Grid(width, height, cellSize, gridContext).initGrid();
           $mainCanvas = $('#main-canvas');
-          $mainCanvas.data('board', new Board($mainCanvas[0].getContext('2d')));
+          $mainCanvas[0].width = width * cellSize;
+          $mainCanvas[0].height = height * cellSize;
+          canvasContext = $mainCanvas[0].getContext('2d');
+          $mainCanvas.data('board', new Board(width, height, cellSize, canvasContext));
           $('[data-game-action]').on('click', function() {
             var action;
             action = $(this).data('game-action');
@@ -204,8 +221,8 @@
             return false;
           }).on('mousedown', function(e) {
             var board, x, y;
-            x = Math.floor(e.offsetX / 10.0);
-            y = Math.floor(e.offsetY / 10.0);
+            x = Math.floor(e.offsetX / cellSize);
+            y = Math.floor(e.offsetY / cellSize);
             board = $(this).data('board');
             if (e.which === 1) {
               return board.addCell(x, y);
@@ -219,9 +236,9 @@
     </script>
   </head>
   <body>
-    <div id='board'>
-      <canvas height='500' id='main-canvas' width='500'></canvas>
-      <canvas height='501' id='grid' width='501'></canvas>
+    <div data-cell-size='10' data-height='50' data-width='50' id='board'>
+      <canvas id='main-canvas'></canvas>
+      <canvas id='grid'></canvas>
     </div>
     <button data-game-action='start' type='button'>
       Start
